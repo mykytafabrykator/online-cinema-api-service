@@ -1,7 +1,7 @@
-from idlelib.query import Query
-from typing import Any
+from typing import Any, Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select, delete
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import (
     ActivationToken,
@@ -12,96 +12,118 @@ from src.database import (
 )
 
 
-def get_user_by_email(db: Session, email: str) -> Query | None:
-    return db.query(User).filter_by(email=email).first()
+async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
+    stmt = select(User).filter_by(email=email)
+    result = await db.execute(stmt)
+    return result.scalars().first()
 
 
-def get_user_group_by_name(db: Session, name: str) -> Query | None:
-    return db.query(UserGroup).filter_by(name=name).first()
+async def get_user_group_by_name(
+        db: AsyncSession,
+        name: str
+) -> Optional[UserGroup]:
+    stmt = select(UserGroup).filter_by(name=name)
+    result = await db.execute(stmt)
+    return result.scalars().first()
 
 
-def get_user_by_id(db: Session, user_id: int) -> Query | None:
-    return db.query(User).filter_by(id=user_id).first()
+async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
+    stmt = select(User).filter_by(id=user_id)
+    result = await db.execute(stmt)
+    return result.scalars().first()
 
 
-def create_user_group_by_name(db: Session, name: str) -> UserGroup:
+async def create_user_group_by_name(db: AsyncSession, name: str) -> UserGroup:
     user_group = UserGroup(name=name)
     db.add(user_group)
-    db.commit()
-    db.refresh(user_group)
+    await db.commit()
+    await db.refresh(user_group)
     return user_group
 
 
-def create_user_by_email_password_group_id(
-        db: Session,
+async def create_user_by_email_password_group_id(
+        db: AsyncSession,
         email: str,
         password: str,
         group_id: int
-) -> Any:
+) -> tuple[User, ActivationToken]:
     new_user = User.create(
         email=str(email),
         raw_password=password,
         group_id=group_id,
     )
     db.add(new_user)
-    db.flush()
+    await db.flush()
 
     activation_token = ActivationToken(user_id=new_user.id)
     db.add(activation_token)
 
-    db.commit()
-    db.refresh(new_user)
+    await db.commit()
+    await db.refresh(new_user)
     return new_user, activation_token
 
 
-def get_activation_token_by_email_token(
-        db: Session,
+async def get_activation_token_by_email_token(
+        db: AsyncSession,
         email: str,
-        token: Any
-) -> Query | None:
-    return (
-        db.query(ActivationToken)
+        token: str
+) -> Optional[ActivationToken]:
+    stmt = (
+        select(ActivationToken)
         .join(User)
         .filter(
             User.email == email,
             ActivationToken.token == token,
         )
-        .first()
     )
+    result = await db.execute(stmt)
+    return result.scalars().first()
 
 
-def delete_token(db: Session, token: Any) -> None:
-    db.delete(token)
-    db.commit()
+async def delete_token(db: AsyncSession, token: Any) -> None:
+    await db.delete(token)
+    await db.commit()
 
 
-def delete_password_reset_token_by_user_id(db: Session, user_id: int) -> None:
-    db.query(PasswordResetToken).filter_by(user_id=user_id).delete()
+async def delete_password_reset_token_by_user_id(
+        db: AsyncSession,
+        user_id: int
+) -> None:
+    stmt = delete(PasswordResetToken).where(
+        PasswordResetToken.user_id == user_id
+    )
+    await db.execute(stmt)
+    await db.commit()
 
 
-def create_password_reset_token_by_user_id(db: Session, user_id: int) -> Any:
+async def create_password_reset_token_by_user_id(
+        db: AsyncSession,
+        user_id: int
+) -> PasswordResetToken:
     reset_token = PasswordResetToken(user_id=user_id)
     db.add(reset_token)
-    db.commit()
+    await db.commit()
     return reset_token
 
 
-def get_password_reset_token_by_user_id(
-        db: Session,
+async def get_password_reset_token_by_user_id(
+        db: AsyncSession,
         user_id: int
-) -> Query | None:
-    return db.query(PasswordResetToken).filter_by(user_id=user_id).first()
+) -> Optional[PasswordResetToken]:
+    stmt = select(PasswordResetToken).filter_by(user_id=user_id)
+    result = await db.execute(stmt)
+    return result.scalars().first()
 
 
-def db_rollback(db: Session) -> None:
-    db.rollback()
+async def db_rollback(db: AsyncSession) -> None:
+    await db.rollback()
 
 
-def create_refresh_token_by_user_id_days_token(
-        db: Session,
+async def create_refresh_token_by_user_id_days_token(
+        db: AsyncSession,
         user_id: int,
         days_valid: int,
-        token: Any
+        token: str
 ) -> None:
     refresh_token = RefreshToken.create(
         user_id=user_id,
@@ -109,21 +131,25 @@ def create_refresh_token_by_user_id_days_token(
         token=token,
     )
     db.add(refresh_token)
-    db.flush()
-    db.commit()
+    await db.flush()
+    await db.commit()
 
 
-def get_refresh_token_by_refresh_token(
-        db: Session,
-        refresh_token: Any
-) -> Query | None:
-    return db.query(RefreshToken).filter_by(token=refresh_token).first()
+async def get_refresh_token_by_refresh_token(
+        db: AsyncSession,
+        refresh_token: str
+) -> Optional[RefreshToken]:
+    stmt = select(RefreshToken).filter_by(token=refresh_token)
+    result = await db.execute(stmt)
+    return result.scalars().first()
 
 
-def get_all_activation_tokens(db: Session) -> Query:
-    return db.query(ActivationToken).all()
+async def get_all_activation_tokens(db: AsyncSession) -> list[ActivationToken]:
+    stmt = select(ActivationToken)
+    result = await db.execute(stmt)
+    return result.scalars().all()
 
 
-def remove_activation_token(db: Session, token: Any) -> None:
-    db.delete(token)
-    db.commit()
+async def remove_activation_token(db: AsyncSession, token: Any) -> None:
+    await db.delete(token)
+    await db.commit()

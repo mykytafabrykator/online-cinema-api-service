@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 
+from src.routes import accounts
+
 app = FastAPI(
     title="Online Cinema API",
     description="An online cinema is a digital platform that allows users to "
@@ -10,6 +12,8 @@ app = FastAPI(
 )
 
 api_version_prefix = "/api/v1"
+
+app.include_router(accounts.router, prefix="/users", tags=["Authentication"])
 
 
 @app.get("/")

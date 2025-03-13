@@ -1,11 +1,8 @@
 from datetime import datetime, timezone
-from typing import cast
 
 from fastapi import APIRouter, Depends, status, HTTPException
-from sqlalchemy import select, delete
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
 
 from src.database import (
     get_db,
@@ -14,6 +11,23 @@ from src.database import (
     UserGroupEnum,
     ActivationToken,
     PasswordResetToken,
+)
+from src.database.crud.accounts import (
+    create_password_reset_token_by_user_id,
+    create_refresh_token_by_user_id_days_token,
+    create_user_by_email_password_group_id,
+    create_user_group_by_name,
+    db_rollback,
+    delete_password_reset_token_by_user_id,
+    delete_token,
+    get_activation_token_by_email_token,
+    get_password_reset_token_by_user_id,
+    get_refresh_token_by_refresh_token,
+    get_user_by_email,
+    get_user_by_id,
+    get_user_group_by_name,
+    get_all_activation_tokens,
+    remove_activation_token,
 )
 from src.schemas import (
     UserRegistrationRequestSchema,
@@ -89,38 +103,29 @@ async def register_user(
             - 500 Internal Server Error
             if an error occurs during user creation.
     """
-    stmt = select(User).where(User.email == user_data.email)
-    result = await db.execute(stmt)
-    existing_user = result.scalars().first()
+    existing_user = await get_user_by_email(db=db, email=user_data.email)
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"A user with this email {user_data.email} already exists."
         )
 
-    stmt = select(UserGroup).where(UserGroup.name == UserGroupEnum.USER)
-    result = await db.execute(stmt)
-    user_group = result.scalars().first()
+    user_group = await get_user_group_by_name(db=db, name=UserGroupEnum.USER)
     if not user_group:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Default user group not found."
+        user_group = await create_user_group_by_name(
+            db=db,
+            name=UserGroupEnum.USER
         )
 
     try:
-        new_user = User.create(
-            email=str(user_data.email),
-            raw_password=user_data.password,
-            group_id=user_group.id,
+        new_user, activation_token = await (
+            create_user_by_email_password_group_id(
+                db=db,
+                email=user_data.email,
+                password=user_data.password,
+                group_id=user_group.id
+            )
         )
-        db.add(new_user)
-        await db.flush()
-
-        activation_token = ActivationToken(user_id=new_user.id)
-        db.add(activation_token)
-
-        await db.commit()
-        await db.refresh(new_user)
     except SQLAlchemyError as e:
         await db.rollback()
         raise HTTPException(
@@ -194,28 +199,21 @@ async def activate_account(
             - 400 Bad Request if the activation token is invalid or expired.
             - 400 Bad Request if the user account is already active.
     """
-    stmt = (
-        select(ActivationToken)
-        .options(joinedload(ActivationToken.user))
-        .join(User)
-        .where(
-            User.email == activation_data.email,
-            ActivationToken.token == activation_data.token
-        )
+    token_record = await get_activation_token_by_email_token(
+        db=db,
+        email=activation_data.email,
+        token=activation_data.token
     )
-    result = await db.execute(stmt)
-    token_record = result.scalars().first()
+
+    if not token_record:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired activation token."
+        )
 
     now_utc = datetime.now(timezone.utc)
-    expire_date = cast(
-        datetime,
-        token_record.expires_at
-    ).replace(tzinfo=timezone.utc)
-
-    if not token_record or expire_date < now_utc:
-        if token_record:
-            await db.delete(token_record)
-            await db.commit()
+    if token_record.expires_at.replace(tzinfo=timezone.utc) < now_utc:
+        await delete_token(db=db, token=token_record)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired activation token."
@@ -229,9 +227,7 @@ async def activate_account(
         )
 
     user.is_active = True
-    await db.delete(token_record)
-    await db.commit()
-
+    await delete_token(db=db, token=token_record)
     return MessageResponseSchema(
         message="User account activated successfully."
     )
@@ -270,9 +266,7 @@ async def request_password_reset_token(
         MessageResponseSchema: A success message indicating
         that instructions will be sent.
     """
-    stmt = select(User).filter_by(email=data.email)
-    result = await db.execute(stmt)
-    user = result.scalars().first()
+    user = await get_user_by_email(db=db, email=data.email)
 
     if not user or not user.is_active:
         return MessageResponseSchema(
@@ -280,13 +274,12 @@ async def request_password_reset_token(
                     "receive an email with instructions."
         )
 
-    await db.execute(
-        delete(PasswordResetToken).where(PasswordResetToken.user_id == user.id)
-    )
+    await delete_password_reset_token_by_user_id(db=db, user_id=user.id)
 
-    reset_token = PasswordResetToken(user_id=cast(int, user.id))
-    db.add(reset_token)
-    await db.commit()
+    reset_token = await create_password_reset_token_by_user_id(
+        db=db,
+        user_id=user.id
+    )
 
     return MessageResponseSchema(
         message="If you are registered, you will "
@@ -368,35 +361,30 @@ async def reset_password(
             - 500 Internal Server Error if an error
             occurs during the password reset process.
     """
-    stmt = select(User).filter_by(email=data.email)
-    result = await db.execute(stmt)
-    user = result.scalars().first()
+    user = await get_user_by_email(db=db, email=data.email)
+
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid email or token."
         )
 
-    stmt = select(PasswordResetToken).filter_by(user_id=user.id)
-    result = await db.execute(stmt)
-    token_record = result.scalars().first()
+    token_record = await get_password_reset_token_by_user_id(
+        db=db,
+        user_id=user.id
+    )
 
     if not token_record or token_record.token != data.token:
         if token_record:
-            await db.run_sync(lambda s: s.delete(token_record))
-            await db.commit()
+            await delete_token(db=db, token=token_record)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid email or token."
         )
 
-    expires_at = cast(
-        datetime,
-        token_record.expires_at
-    ).replace(tzinfo=timezone.utc)
-    if expires_at < datetime.now(timezone.utc):
-        await db.run_sync(lambda s: s.delete(token_record))
-        await db.commit()
+    if (token_record.expires_at.replace(tzinfo=timezone.utc)
+            < datetime.now(timezone.utc)):
+        await delete_token(db=db, token=token_record)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid email or token."
@@ -404,10 +392,9 @@ async def reset_password(
 
     try:
         user.password = data.password
-        await db.run_sync(lambda s: s.delete(token_record))
-        await db.commit()
+        await delete_token(db=db, token=token_record)
     except SQLAlchemyError:
-        await db.rollback()
+        await db_rollback(db)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while resetting the password."
