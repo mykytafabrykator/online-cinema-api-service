@@ -3,7 +3,7 @@ from logging.config import fileConfig
 from alembic import context
 
 from src.database import Base
-from src.database.session_sqlite import sqlite_engine
+from src.database.session_postgresql import sync_postgresql_engine
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -38,7 +38,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    connectable = sqlite_engine
+    connectable = sync_postgresql_engine
 
     with connectable.connect() as connection:
         context.configure(
@@ -59,7 +59,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = sqlite_engine
+    connectable = sync_postgresql_engine
 
     with connectable.connect() as connection:
         context.configure(
