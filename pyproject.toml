@@ -17,6 +17,7 @@ flake8 = "^7.1.2"
 sqlalchemy = "^2.0.39"
 alembic = "^1.15.1"
 pydantic-settings = "^2.8.1"
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 
 [tool.poetry.group.dev.dependencies]
 
