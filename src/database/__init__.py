@@ -1,2 +1,10 @@
 from src.database.models.base import Base
-from src.database.validators import accounts
+from src.database.models.accounts import (
+    ActivationToken,
+    PasswordResetToken,
+    RefreshToken,
+    User,
+    UserGroup,
+    UserGroupEnum,
+    UserProfile,
+)
