@@ -17,7 +17,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from src.database import Base
-from src.database import accounts as validators
+from src.database.validators import accounts as validators
 from src.security import hash_password, verify_password
 from src.security import generate_secure_token
 
