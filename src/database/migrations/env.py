@@ -2,7 +2,7 @@ from logging.config import fileConfig
 
 from alembic import context
 
-from src.database.models.base import Base
+from src.database import Base
 from src.database.session_sqlite import sqlite_engine
 
 # this is the Alembic Config object, which provides
