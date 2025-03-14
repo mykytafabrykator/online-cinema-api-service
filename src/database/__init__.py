@@ -11,6 +11,18 @@ from database.models.accounts import (
     UserProfile,
     GenderEnum,
 )
+from database.models.movies import (
+    Certification,
+    Director,
+    Genre,
+    Movie,
+    MovieDirectors,
+    MovieGenres,
+    MovieStars,
+    Star,
+    FavoriteMovie,
+    MovieLike
+)
 
 environment = os.getenv("ENVIRONMENT", "developing")
 
