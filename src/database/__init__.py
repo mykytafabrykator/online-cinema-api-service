@@ -23,6 +23,9 @@ from database.models.movies import (
     FavoriteMovie,
     MovieLike
 )
+from database.models.payments import Payment, PaymentItem, PaymentStatusEnum
+from database.models.orders import Order, OrderItem
+from database.models.shopping_cart import Cart, CartItem
 
 environment = os.getenv("ENVIRONMENT", "developing")
 

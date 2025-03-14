@@ -142,6 +142,10 @@ class Movie(Base):
         "Director", secondary="movie_directors", back_populates="movies"
     )
 
+    order_items: Mapped[list["OrderItem"]] = relationship(
+        "OrderItem", back_populates="movie"
+    )
+
     likes: Mapped[list["MovieLike"]] = relationship(
         "MovieLike", back_populates="movie", cascade="all, delete-orphan"
     )
