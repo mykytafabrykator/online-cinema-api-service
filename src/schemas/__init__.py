@@ -10,3 +10,22 @@ from schemas.accounts import (
     TokenRefreshRequestSchema,
     TokenRefreshResponseSchema
 )
+from schemas.movies import (
+    CertificationSchema,
+    CertificationResponseSchema,
+    GenresSchema,
+    GenreResponseSchema,
+    StarsSchema,
+    StarsResponseSchema,
+    DirectorsSchema,
+    MovieListItemSchema,
+    MovieListResponseSchema,
+    MovieBaseSchema,
+    MovieCreateSchema,
+    MovieDetailSchema,
+    MovieUpdateSchema,
+    MovieLikeResponseSchema,
+    MovieFavoriteResponseSchema,
+    MovieSortEnum,
+    DetailMessageSchema,
+)
