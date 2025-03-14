@@ -26,6 +26,7 @@ aiosmtplib = "^4.0.0"
 celery = {extras = ["redis"], version = "^5.4.0"}
 asgiref = "^3.8.1"
 aioboto3 = "^14.1.0"
+pillow = "^11.1.0"
 
 [tool.poetry.group.dev.dependencies]
 
