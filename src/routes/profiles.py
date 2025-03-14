@@ -36,7 +36,9 @@ async def create_profile(
         jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
         db: AsyncSession = Depends(get_db),
         s3_client: S3StorageInterface = Depends(get_s3_storage_client),
-        profile_data: ProfileCreateSchema = Depends(ProfileCreateSchema.from_form)
+        profile_data: ProfileCreateSchema = Depends(
+            ProfileCreateSchema.from_form
+        )
 ) -> ProfileResponseSchema:
     """
     Creates a user profile.
@@ -48,9 +50,11 @@ async def create_profile(
     - Store profile details in the database.
 
     Args:
-        user_id (int): The ID of the user for whom the profile is being created.
+        user_id (int): The ID of the user for whom the
+        profile is being created.
         token (str): The authentication token.
-        jwt_manager (JWTAuthManagerInterface): JWT manager for decoding tokens.
+        jwt_manager (JWTAuthManagerInterface): JWT manager for
+        decoding tokens.
         db (AsyncSession): The asynchronous database session.
         s3_client (S3StorageInterface): The asynchronous S3 storage client.
         profile_data (ProfileCreateSchema): The profile data from the form.
@@ -59,8 +63,9 @@ async def create_profile(
         ProfileResponseSchema: The created user profile details.
 
     Raises:
-        HTTPException: If authentication fails, if the user is not found or inactive,
-                       or if the profile already exists, or if S3 upload fails.
+        HTTPException: If authentication fails, if the user is not found
+                       or inactive, or if the profile already exists,
+                       or if S3 upload fails.
     """
     try:
         payload = jwt_manager.decode_access_token(token)
@@ -107,7 +112,10 @@ async def create_profile(
     avatar_key = f"avatars/{user.id}_{profile_data.avatar.filename}"
 
     try:
-        await s3_client.upload_file(file_name=avatar_key, file_data=avatar_bytes)
+        await s3_client.upload_file(
+            file_name=avatar_key,
+            file_data=avatar_bytes
+        )
     except S3FileUploadError as e:
         print(f"Error uploading avatar to S3: {e}")
         raise HTTPException(
