@@ -28,6 +28,8 @@ from src.database.crud.accounts import (
     get_user_by_email,
     get_user_by_id,
     get_user_group_by_name,
+    create_activation_token_by_user_id,
+    get_latest_activation_token_by_email,
 )
 from src.exceptions import BaseSecurityError
 from src.notifications import EmailSenderInterface
@@ -728,3 +730,97 @@ async def logout_user(
         )
 
     return MessageResponseSchema(message="User logged out successfully.")
+
+
+@router.post(
+    "/resend-activation/",
+    response_model=MessageResponseSchema,
+    summary="Resend Activation Email",
+    description="Resend a new activation token if the previous one expired.",
+    status_code=status.HTTP_200_OK,
+    responses={
+        400: {
+            "description": "Bad Request - User is already active.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "User account is already active."
+                    }
+                }
+            },
+        },
+        404: {
+            "description": "Not Found - User with this email does not exist.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "User with this email does not exist."
+                    }
+                }
+            },
+        },
+    },
+)
+async def resend_activation_email(
+    email: str,
+    db: AsyncSession = Depends(get_db),
+    email_sender: EmailSenderInterface = Depends(
+        get_accounts_email_notificator
+    ),
+) -> MessageResponseSchema:
+    """
+    Endpoint for resending the activation email.
+
+    Checks if the user exists and is not activated.
+    Deletes the old activation token and generates a new one.
+    Sends an activation email with a new token.
+
+    Args:
+        email (str): The user's email address.
+        db (AsyncSession): The asynchronous database session.
+        email_sender (EmailSenderInterface): The email sender service.
+
+    Returns:
+        MessageResponseSchema: A success message confirming the email was sent.
+
+    Raises:
+        HTTPException:
+            - 400 Bad Request if the user is already active.
+            - 404 Not Found if the user does not exist.
+    """
+    user = await get_user_by_email(db=db, email=email)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User with this email does not exist."
+        )
+
+    if user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User account is already active."
+        )
+
+    token_record = await get_latest_activation_token_by_email(
+        db=db,
+        email=email
+    )
+    if token_record:
+        await delete_token(db=db, token=token_record)
+
+    new_activation_token = await create_activation_token_by_user_id(
+        db=db,
+        user_id=user.id
+    )
+
+    activation_link = "http://127.0.0.1/accounts/activate/"
+    await email_sender.send_activation_email(
+        user.email,
+        new_activation_token.token,
+        activation_link
+    )
+
+    return MessageResponseSchema(
+        message="New activation email sent successfully."
+    )

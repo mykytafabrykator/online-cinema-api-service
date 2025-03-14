@@ -1,6 +1,6 @@
 from typing import Any, Optional
 
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -155,3 +155,29 @@ async def get_all_activation_tokens(db: AsyncSession) -> list[ActivationToken]:
 async def remove_activation_token(db: AsyncSession, token: Any) -> None:
     await db.delete(token)
     await db.commit()
+
+
+async def create_activation_token_by_user_id(
+    db: AsyncSession,
+    user_id: int
+) -> ActivationToken:
+    new_token = ActivationToken(user_id=user_id)
+    db.add(new_token)
+    await db.commit()
+    return new_token
+
+
+async def get_latest_activation_token_by_email(
+        db: AsyncSession,
+        email: str
+) -> Optional[ActivationToken]:
+    stmt = (
+        select(ActivationToken)
+        .options(joinedload(ActivationToken.user))
+        .join(User)
+        .filter(User.email == email)
+        .order_by(desc(ActivationToken.expires_at))
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    return result.scalars().first()
