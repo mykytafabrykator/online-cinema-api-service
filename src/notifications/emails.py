@@ -1,8 +1,8 @@
 import logging
-import smtplib
-from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
+import aiosmtplib
 from jinja2 import Environment, FileSystemLoader
 
 from exceptions import BaseEmailError
@@ -43,7 +43,12 @@ class EmailSender(EmailSenderInterface):
 
         self._env = Environment(loader=FileSystemLoader(template_dir))
 
-    def _send_email(self, email: str, subject: str, html_content: str) -> None:
+    async def _send_email(
+            self,
+            email: str,
+            subject: str,
+            html_content: str
+    ) -> None:
         message = MIMEMultipart()
         message["From"] = self._email
         message["To"] = email
@@ -51,27 +56,34 @@ class EmailSender(EmailSenderInterface):
         message.attach(MIMEText(html_content, "html"))
 
         try:
-            with smtplib.SMTP(self._hostname, self._port) as server:
-                if self._use_tls:
-                    server.starttls()
-                server.login(self._email, self._password)
-                server.sendmail(self._email, email, message.as_string())
-        except smtplib.SMTPException as error:
+            smtp = aiosmtplib.SMTP(
+                hostname=self._hostname,
+                port=self._port,
+                start_tls=self._use_tls
+            )
+            await smtp.connect()
+            if self._use_tls:
+                await smtp.starttls()
+            await smtp.login(self._email, self._password)
+            await smtp.sendmail(self._email, [email], message.as_string())
+            await smtp.quit()
+        except aiosmtplib.SMTPException as error:
             logging.error(f"Failed to send email to {email}: {error}")
             raise BaseEmailError(f"Failed to send email to {email}: {error}")
 
-    def send_activation_email(
+    async def send_activation_email(
             self, email: str, token: str, activation_link: str
     ) -> None:
         template = self._env.get_template(self._activation_email_template_name)
         html_content = template.render(
-            email=email, token=token, activation_link=activation_link
+            email=email,
+            activation_link=activation_link
         )
 
         subject = "Account Activation"
-        self._send_email(email, subject, html_content)
+        await self._send_email(email, subject, html_content)
 
-    def send_activation_complete_email(
+    async def send_activation_complete_email(
             self,
             email: str,
             login_link: str
@@ -82,16 +94,20 @@ class EmailSender(EmailSenderInterface):
         html_content = template.render(email=email, login_link=login_link)
 
         subject = "Account Activated Successfully"
-        self._send_email(email, subject, html_content)
+        await self._send_email(email, subject, html_content)
 
-    def send_password_reset_email(self, email: str, reset_link: str) -> None:
+    async def send_password_reset_email(
+            self,
+            email: str,
+            reset_link: str
+    ) -> None:
         template = self._env.get_template(self._password_email_template_name)
         html_content = template.render(email=email, reset_link=reset_link)
 
         subject = "Password Reset Request"
-        self._send_email(email, subject, html_content)
+        await self._send_email(email, subject, html_content)
 
-    def send_password_reset_complete_email(
+    async def send_password_reset_complete_email(
             self,
             email: str,
             login_link: str
@@ -102,11 +118,17 @@ class EmailSender(EmailSenderInterface):
         html_content = template.render(email=email, login_link=login_link)
 
         subject = "Your Password Has Been Successfully Reset"
-        self._send_email(email, subject, html_content)
+        await self._send_email(email, subject, html_content)
 
-    def send_payment_success_email(self, email: str, order_link: str) -> None:
-        template = self._env.get_template("payment_success.html")
+    async def send_payment_success_email(
+            self,
+            email: str,
+            order_link: str
+    ) -> None:
+        template = self._env.get_template(
+            self._payment_success_email_template_name
+        )
         html_content = template.render(email=email, order_link=order_link)
 
         subject = "Payment Successful"
-        self._send_email(email, subject, html_content)
+        await self._send_email(email, subject, html_content)
