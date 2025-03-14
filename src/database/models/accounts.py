@@ -108,6 +108,14 @@ class User(Base):
         "UserProfile", back_populates="user", cascade="all, delete-orphan"
     )
 
+    likes: Mapped[list["MovieLike"]] = relationship(
+        "MovieLike", back_populates="user", cascade="all, delete-orphan"
+    )
+
+    favorites: Mapped[list["FavoriteMovie"]] = relationship(
+        "FavoriteMovie", back_populates="user", cascade="all, delete-orphan"
+    )
+
     def __repr__(self) -> str:
         return (f"<User(id={self.id}, email={self.email}, "
                 f"is_active={self.is_active})>")
