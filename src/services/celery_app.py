@@ -12,8 +12,8 @@ celery_app = Celery(
 )
 
 celery_app.conf.beat_schedule = {
-    "remove_expired_activation_tokens_every_hour": {
-        "task": "src.services.tasks.accounts.remove_expired_activation_tokens",
+    "remove_expired_activation_tokens-every-hour": {
+        "task": "src.services.tasks.remove_expired_activation_tokens",
         "schedule": 3600.0,  # Every hour
     },
 }
