@@ -24,6 +24,7 @@ psycopg2 = "^2.9.10"
 python-jose = "^3.4.0"
 aiosmtplib = "^4.0.0"
 celery = {extras = ["redis"], version = "^5.4.0"}
+asgiref = "^3.8.1"
 
 [tool.poetry.group.dev.dependencies]
 
