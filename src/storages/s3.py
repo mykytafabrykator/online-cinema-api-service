@@ -22,7 +22,8 @@ class S3StorageClient(S3StorageInterface):
         bucket_name: str
     ):
         """
-        Initialize the asynchronous S3 Storage Client using an aioboto3 Session.
+        Initialize the asynchronous S3 Storage Client
+        using an aioboto3 Session.
 
         Args:
             endpoint_url (str): S3-compatible storage endpoint.
@@ -40,7 +41,11 @@ class S3StorageClient(S3StorageInterface):
             aws_secret_access_key=self._secret_key,
         )
 
-    async def upload_file(self, file_name: str, file_data: Union[bytes, bytearray]) -> None:
+    async def upload_file(
+            self,
+            file_name: str,
+            file_data: Union[bytes, bytearray]
+    ) -> None:
         """
         Asynchronously upload a file to the S3-compatible storage.
 
@@ -50,7 +55,8 @@ class S3StorageClient(S3StorageInterface):
 
         Raises:
             S3ConnectionError: If there is a connection error with S3.
-            S3FileUploadError: If the file upload fails due to a BotoCore error.
+            S3FileUploadError: If the file upload fails due to a BotoCore
+            error.
         """
         try:
             async with self._session.client(
@@ -63,9 +69,11 @@ class S3StorageClient(S3StorageInterface):
                     ContentType="image/jpeg"
                 )
         except (ConnectionError, HTTPClientError, NoCredentialsError) as e:
-            raise S3ConnectionError(f"Failed to connect to S3 storage: {str(e)}") from e
+            raise S3ConnectionError("Failed to connect to S3 storage: "
+                                    f"{str(e)}") from e
         except BotoCoreError as e:
-            raise S3FileUploadError(f"Failed to upload to S3 storage: {str(e)}") from e
+            raise S3FileUploadError("Failed to upload to S3 storage: "
+                                    f"{str(e)}") from e
 
     async def get_file_url(self, file_name: str) -> str:
         """
