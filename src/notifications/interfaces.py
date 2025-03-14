@@ -18,7 +18,11 @@ class EmailSenderInterface(ABC):
         pass
 
     @abstractmethod
-    async def send_password_reset_email(self, email: str, reset_link: str) -> None:
+    async def send_password_reset_email(
+            self,
+            email: str,
+            reset_link: str
+    ) -> None:
         pass
 
     @abstractmethod
@@ -30,5 +34,9 @@ class EmailSenderInterface(ABC):
         pass
 
     @abstractmethod
-    async def send_payment_success_email(self, email: str, order_link: str) -> None:
+    async def send_payment_success_email(
+            self,
+            email: str,
+            order_link: str
+    ) -> None:
         pass
