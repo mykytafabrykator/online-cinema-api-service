@@ -71,8 +71,14 @@ class EmailSender(EmailSenderInterface):
         subject = "Account Activation"
         self._send_email(email, subject, html_content)
 
-    def send_activation_complete_email(self, email: str, login_link: str) -> None:
-        template = self._env.get_template(self._activation_complete_email_template_name)
+    def send_activation_complete_email(
+            self,
+            email: str,
+            login_link: str
+    ) -> None:
+        template = self._env.get_template(
+            self._activation_complete_email_template_name
+        )
         html_content = template.render(email=email, login_link=login_link)
 
         subject = "Account Activated Successfully"
@@ -85,8 +91,14 @@ class EmailSender(EmailSenderInterface):
         subject = "Password Reset Request"
         self._send_email(email, subject, html_content)
 
-    def send_password_reset_complete_email(self, email: str, login_link: str) -> None:
-        template = self._env.get_template(self._password_complete_email_template_name)
+    def send_password_reset_complete_email(
+            self,
+            email: str,
+            login_link: str
+    ) -> None:
+        template = self._env.get_template(
+            self._password_complete_email_template_name
+        )
         html_content = template.render(email=email, login_link=login_link)
 
         subject = "Your Password Has Been Successfully Reset"
