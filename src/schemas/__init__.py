@@ -1,4 +1,4 @@
-from src.schemas.accounts import (
+from schemas.accounts import (
     UserRegistrationRequestSchema,
     UserRegistrationResponseSchema,
     UserActivationRequestSchema,
