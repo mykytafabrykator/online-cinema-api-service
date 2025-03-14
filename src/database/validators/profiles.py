@@ -5,7 +5,7 @@ from io import BytesIO
 from fastapi import UploadFile
 from PIL import Image
 
-from database.models.accounts import GenderEnum
+from database import GenderEnum
 
 
 def validate_name(name: str) -> None:
