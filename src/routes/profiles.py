@@ -1,10 +1,11 @@
 from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import HttpUrl
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import get_jwt_auth_manager
+from config import get_s3_storage_client, get_jwt_auth_manager
 from database import (
     get_db,
     User,
@@ -13,10 +14,11 @@ from database import (
     UserGroup,
     UserGroupEnum
 )
-from exceptions import BaseSecurityError
+from exceptions import BaseSecurityError, S3FileUploadError
 from schemas.profiles import ProfileCreateSchema, ProfileResponseSchema
 from security import JWTAuthManagerInterface
 from security.http import get_token
+from storages import S3StorageInterface
 
 
 router = APIRouter()
@@ -33,6 +35,7 @@ async def create_profile(
         token: str = Depends(get_token),
         jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
         db: AsyncSession = Depends(get_db),
+        s3_client: S3StorageInterface = Depends(get_s3_storage_client),
         profile_data: ProfileCreateSchema = Depends(ProfileCreateSchema.from_form)
 ) -> ProfileResponseSchema:
     """
@@ -49,6 +52,7 @@ async def create_profile(
         token (str): The authentication token.
         jwt_manager (JWTAuthManagerInterface): JWT manager for decoding tokens.
         db (AsyncSession): The asynchronous database session.
+        s3_client (S3StorageInterface): The asynchronous S3 storage client.
         profile_data (ProfileCreateSchema): The profile data from the form.
 
     Returns:
@@ -102,6 +106,15 @@ async def create_profile(
     avatar_bytes = await profile_data.avatar.read()
     avatar_key = f"avatars/{user.id}_{profile_data.avatar.filename}"
 
+    try:
+        await s3_client.upload_file(file_name=avatar_key, file_data=avatar_bytes)
+    except S3FileUploadError as e:
+        print(f"Error uploading avatar to S3: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to upload avatar. Please try again later."
+        )
+
     new_profile = UserProfile(
         user_id=cast(int, user.id),
         first_name=profile_data.first_name,
@@ -116,6 +129,8 @@ async def create_profile(
     await db.commit()
     await db.refresh(new_profile)
 
+    avatar_url = await s3_client.get_file_url(new_profile.avatar)
+
     return ProfileResponseSchema(
         id=new_profile.id,
         user_id=new_profile.user_id,
@@ -124,5 +139,5 @@ async def create_profile(
         gender=new_profile.gender,
         date_of_birth=new_profile.date_of_birth,
         info=new_profile.info,
-        avatar=avatar_key
+        avatar=cast(HttpUrl, avatar_url)
     )
