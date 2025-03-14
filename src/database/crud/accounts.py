@@ -2,6 +2,7 @@ from typing import Any, Optional
 
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from src.database import (
     ActivationToken,
@@ -70,6 +71,7 @@ async def get_activation_token_by_email_token(
 ) -> Optional[ActivationToken]:
     stmt = (
         select(ActivationToken)
+        .options(joinedload(ActivationToken.user))
         .join(User)
         .filter(
             User.email == email,
