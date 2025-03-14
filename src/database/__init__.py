@@ -20,6 +20,8 @@ from database.models.movies import (
     MovieGenres,
     MovieStars,
     Star,
+    FavoriteMovie,
+    MovieLike
 )
 
 environment = os.getenv("ENVIRONMENT", "developing")
