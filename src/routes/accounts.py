@@ -11,11 +11,7 @@ from src.config import (
 )
 from src.database import (
     get_db,
-    User,
-    UserGroup,
     UserGroupEnum,
-    ActivationToken,
-    PasswordResetToken,
 )
 from src.database.crud.accounts import (
     create_password_reset_token_by_user_id,
@@ -31,8 +27,6 @@ from src.database.crud.accounts import (
     get_user_by_email,
     get_user_by_id,
     get_user_group_by_name,
-    get_all_activation_tokens,
-    remove_activation_token,
 )
 from src.exceptions import BaseSecurityError
 from src.schemas import (
@@ -621,3 +615,70 @@ async def refresh_access_token(
     new_access_token = jwt_manager.create_access_token({"user_id": user_id})
 
     return TokenRefreshResponseSchema(access_token=new_access_token)
+
+
+@router.post(
+    "/logout/",
+    response_model=MessageResponseSchema,
+    summary="User Logout",
+    description="Logout user by invalidating the refresh token.",
+    status_code=status.HTTP_200_OK,
+    responses={
+        401: {
+            "description": "Unauthorized - Invalid or missing refresh token.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Refresh token not found."}
+                }
+            },
+        },
+        500: {
+            "description": "Internal Server Error - An error occurred.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "An error occurred "
+                                          "while processing the request."}
+                }
+            },
+        },
+    },
+)
+async def logout_user(
+        token_data: TokenRefreshRequestSchema,
+        db: AsyncSession = Depends(get_db),
+) -> MessageResponseSchema:
+    """
+    Endpoint to logout a user by deleting the refresh token.
+
+    Args:
+        token_data (TokenRefreshRequestSchema): Contains the refresh token.
+        db (AsyncSession): The asynchronous database session.
+
+    Returns:
+        MessageResponseSchema: Confirmation message.
+
+    Raises:
+        HTTPException:
+            - 401 Unauthorized if the refresh token is invalid.
+            - 500 Internal Server Error if an issue occurs during deletion.
+    """
+    refresh_token_record = await get_refresh_token_by_refresh_token(
+        db=db, refresh_token=token_data.refresh_token
+    )
+
+    if not refresh_token_record:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token not found."
+        )
+
+    try:
+        await delete_token(db=db, token=refresh_token_record)
+    except SQLAlchemyError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while processing the request."
+        )
+
+    return MessageResponseSchema(message="User logged out successfully.")
