@@ -19,7 +19,11 @@ class PaymentStatusEnum(str, enum.Enum):
 class Payment(Base):
     __tablename__ = "payments"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
@@ -30,7 +34,9 @@ class Payment(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     status: Mapped[PaymentStatusEnum] = mapped_column(
-        Enum(PaymentStatusEnum), nullable=False, default=PaymentStatusEnum.PENDING
+        Enum(PaymentStatusEnum),
+        nullable=False,
+        default=PaymentStatusEnum.PENDING
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     external_payment_id: Mapped[Optional[str]] = mapped_column(
@@ -46,14 +52,20 @@ class Payment(Base):
 class PaymentItem(Base):
     __tablename__ = "payment_items"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True
+    )
     payment_id: Mapped[int] = mapped_column(
         ForeignKey("payments.id", ondelete="CASCADE"), nullable=False
     )
     order_item_id: Mapped[int] = mapped_column(
         ForeignKey("order_items.id", ondelete="CASCADE"), nullable=False
     )
-    price_at_payment: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    price_at_payment: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2), nullable=False
+    )
 
     payment = relationship("Payment", back_populates="payment_items")
     order_item = relationship("OrderItem", back_populates="payment_items")
