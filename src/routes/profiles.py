@@ -5,11 +5,17 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import get_jwt_auth_manager
-from database import get_db
-from database.models.accounts import User, UserProfile, GenderEnum, UserGroup, UserGroupEnum
+from database import (
+    get_db,
+    User,
+    UserProfile,
+    GenderEnum,
+    UserGroup,
+    UserGroupEnum
+)
 from exceptions import BaseSecurityError
 from schemas.profiles import ProfileCreateSchema, ProfileResponseSchema
-from security.interfaces import JWTAuthManagerInterface
+from security import JWTAuthManagerInterface
 from security.http import get_token
 
 
