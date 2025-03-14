@@ -4,13 +4,13 @@ from abc import ABC, abstractmethod
 class EmailSenderInterface(ABC):
 
     @abstractmethod
-    def send_activation_email(
+    async def send_activation_email(
             self, email: str, token: str, activation_link: str
     ) -> None:
         pass
 
     @abstractmethod
-    def send_activation_complete_email(
+    async def send_activation_complete_email(
             self,
             email: str,
             login_link: str
@@ -18,11 +18,15 @@ class EmailSenderInterface(ABC):
         pass
 
     @abstractmethod
-    def send_password_reset_email(self, email: str, reset_link: str) -> None:
+    async def send_password_reset_email(
+            self,
+            email: str,
+            reset_link: str
+    ) -> None:
         pass
 
     @abstractmethod
-    def send_password_reset_complete_email(
+    async def send_password_reset_complete_email(
             self,
             email: str,
             login_link: str
@@ -30,5 +34,9 @@ class EmailSenderInterface(ABC):
         pass
 
     @abstractmethod
-    def send_payment_success_email(self, email: str, order_link: str) -> None:
+    async def send_payment_success_email(
+            self,
+            email: str,
+            order_link: str
+    ) -> None:
         pass
