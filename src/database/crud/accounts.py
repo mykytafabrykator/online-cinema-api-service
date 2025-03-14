@@ -4,7 +4,7 @@ from sqlalchemy import select, delete, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from src.database import (
+from database import (
     ActivationToken,
     PasswordResetToken,
     RefreshToken,

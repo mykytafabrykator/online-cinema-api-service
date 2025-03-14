@@ -1,7 +1,7 @@
 import os
 
-from src.database.models.base import Base
-from src.database.models.accounts import (
+from database.models.base import Base
+from database.models.accounts import (
     ActivationToken,
     PasswordResetToken,
     RefreshToken,
@@ -9,6 +9,7 @@ from src.database.models.accounts import (
     UserGroup,
     UserGroupEnum,
     UserProfile,
+    GenderEnum,
 )
 
 environment = os.getenv("ENVIRONMENT", "developing")

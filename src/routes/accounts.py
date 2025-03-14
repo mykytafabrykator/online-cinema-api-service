@@ -4,17 +4,17 @@ from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.config import (
+from config import (
     get_jwt_auth_manager,
     get_settings,
     BaseAppSettings,
     get_accounts_email_notificator
 )
-from src.database import (
+from database import (
     get_db,
     UserGroupEnum,
 )
-from src.database.crud.accounts import (
+from database.crud.accounts import (
     create_password_reset_token_by_user_id,
     create_refresh_token_by_user_id_days_token,
     create_user_by_email_password_group_id,
@@ -31,9 +31,9 @@ from src.database.crud.accounts import (
     create_activation_token_by_user_id,
     get_latest_activation_token_by_email,
 )
-from src.exceptions import BaseSecurityError
-from src.notifications import EmailSenderInterface
-from src.schemas import (
+from exceptions import BaseSecurityError
+from notifications import EmailSenderInterface
+from schemas import (
     UserRegistrationRequestSchema,
     UserRegistrationResponseSchema,
     MessageResponseSchema,
@@ -45,7 +45,7 @@ from src.schemas import (
     TokenRefreshRequestSchema,
     TokenRefreshResponseSchema,
 )
-from src.security.interfaces import JWTAuthManagerInterface
+from security import JWTAuthManagerInterface
 
 router = APIRouter()
 

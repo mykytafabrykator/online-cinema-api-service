@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
 from asgiref.sync import async_to_sync
-from src.database.crud.accounts import (
+
+from database.crud.accounts import (
     get_all_activation_tokens,
     remove_activation_token
 )
-from src.database.session_postgresql import get_postgresql_db
-from src.services.celery_app import celery_app
+from database.session_postgresql import get_postgresql_db
+from services.celery_app import celery_app
 import logging
 
 logger = logging.getLogger(__name__)
