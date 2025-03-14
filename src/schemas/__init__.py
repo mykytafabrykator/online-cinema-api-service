@@ -40,3 +40,10 @@ from schemas.payments import (
     PaymentItemCreateSchema,
     PaymentHistoryResponse,
 )
+from schemas.shopping_cart import (
+    CartCreate,
+    CartItemResponse,
+    CartItemDetail,
+    CartResponse,
+    PurchasedMoviesResponse,
+)
