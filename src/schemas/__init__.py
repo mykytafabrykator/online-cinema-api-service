@@ -29,3 +29,14 @@ from schemas.movies import (
     MovieSortEnum,
     DetailMessageSchema,
 )
+from schemas.orders import (
+    OrderItemResponseSchema,
+    OrderCreateSchema,
+    OrderResponseSchema,
+)
+from schemas.payments import (
+    PaymentSchema,
+    PaymentCreateSchema,
+    PaymentItemCreateSchema,
+    PaymentHistoryResponse,
+)
