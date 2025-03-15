@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import func
+from sqlalchemy.sql.functions import now
 
 from database import (
     Certification,
@@ -199,24 +200,24 @@ async def toggle_movie_like(
         db: AsyncSession,
         movie: Movie,
         user_id: int,
-        is_liked: bool
 ) -> MovieLike:
     result = await db.execute(
         select(MovieLike).filter_by(movie_id=movie.id, user_id=user_id)
     )
     movie_like = result.scalars().first()
-
     if movie_like:
-        await db.delete(movie_like)
+        movie_like.is_liked = not movie_like.is_liked
+        movie_like.created_at = now()
     else:
         movie_like = MovieLike(
             user_id=user_id,
             movie_id=movie.id,
-            is_liked=is_liked
+            is_liked=True
         )
         db.add(movie_like)
 
-    await db.commit()
+    await commit_instance(db, movie_like)
+
     return movie_like
 
 

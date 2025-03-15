@@ -3,7 +3,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from config import get_jwt_auth_manager
 from database import get_db
+from database.crud.accounts import get_user_by_id
 from database.crud.movies import (
     filter_movies,
     get_movie_by_id,
@@ -11,7 +13,9 @@ from database.crud.movies import (
     create_movie_post,
     delete_instance,
     commit_instance,
+    toggle_movie_like,
 )
+from database.models.movies import MovieLike
 from schemas import (
     MovieListResponseSchema,
     MovieSortEnum,
@@ -20,7 +24,10 @@ from schemas import (
     MovieCreateSchema,
     DetailMessageSchema,
     MovieUpdateSchema,
+    MovieLikeResponseSchema,
 )
+from security import JWTAuthManagerInterface
+from security.http import get_token
 
 router = APIRouter()
 
@@ -307,3 +314,83 @@ async def update_movie(
         raise HTTPException(status_code=400, detail="Invalid input data.")
     else:
         return DetailMessageSchema(detail="Movie updated successfully.")
+
+
+@router.post(
+    "/{movie_id}/like/",
+    response_model=MovieLikeResponseSchema,
+    summary="Like or dislike a movie",
+    responses={
+        200: {"description": "Movie like status updated."},
+        404: {
+            "description": "Movie or user not found.",
+            "content": {
+                "application/json":
+                    {
+                        "example": {
+                            "detail": "Movie with the given ID was not found."
+                        }
+                    }
+            }
+        },
+        401: {
+            "description": "Unauthorized access.",
+            "content":
+                {
+                    "application/json":
+                        {
+                            "example":
+                                {
+                                    "detail": "Invalid or expired token."
+                                }
+                        }
+                }
+        },
+    }
+)
+async def like_or_dislike(
+        movie_id: int,
+        token: str = Depends(get_token),
+        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
+        db: AsyncSession = Depends(get_db),
+) -> MovieLikeResponseSchema:
+    """
+    Toggle like or dislike for a specific movie.
+
+    **Parameters:**
+    - `movie_id` (int): The unique identifier of the movie.
+    - `token` (str): User authentication token.
+
+    **Returns:**
+    - `MovieLikeResponseSchema`: The updated like status and
+    associated movie/user info.
+
+    **Raises:**
+    - `HTTPException 404`: If the movie or user is not found.
+    - `HTTPException 401`: If the token is invalid or expired.
+    """
+    movie = await get_movie_by_id(db, movie_id)
+    if not movie:
+        raise HTTPException(
+            status_code=404,
+            detail="Movie with the given ID was not found."
+        )
+
+    token_data = jwt_manager.decode_access_token(token)
+    user_id = token_data["user_id"]
+
+    user = await get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User with the given ID was not found."
+        )
+
+    movie_like = await toggle_movie_like(db, movie, user_id)
+
+    return MovieLikeResponseSchema(
+        is_liked=movie_like.is_liked,
+        created_at=movie_like.created_at,
+        user=user,
+        movie=movie,
+    )
