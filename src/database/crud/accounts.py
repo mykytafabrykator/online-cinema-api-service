@@ -29,8 +29,11 @@ async def get_user_group_by_name(
 
 
 async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
-    stmt = select(User).filter_by(id=user_id)
-    result = await db.execute(stmt)
+    result = await db.execute(
+        select(User)
+        .options(joinedload(User.group))
+        .filter(User.id == user_id)
+    )
     return result.scalars().first()
 
 

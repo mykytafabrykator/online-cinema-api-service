@@ -15,7 +15,7 @@ class MessageResponseSchema(BaseModel):
 class OrderItemResponseSchema(BaseModel):
     id: int
     created_at: datetime
-    movie: MovieListItemSchema
+    movie: List[MovieListItemSchema]
     price_at_order: Decimal
     status: OrderStatusEnum
 
