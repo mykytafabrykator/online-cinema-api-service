@@ -255,11 +255,6 @@ async def commit_instance(db: AsyncSession, instance: Any) -> None:
     await db.refresh(instance)
 
 
-async def movie_update(db: AsyncSession, movie: Movie) -> None:
-    await db.commit()
-    await db.refresh(movie)
-
-
 async def get_all_genres(db: AsyncSession) -> list[Genre]:
     result = await db.execute(select(Genre))
     return result.scalars().all()

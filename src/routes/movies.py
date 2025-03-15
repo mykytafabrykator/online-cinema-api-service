@@ -10,7 +10,7 @@ from database.crud.movies import (
     get_movie_by_name,
     create_movie_post,
     delete_instance,
-    movie_update,
+    commit_instance,
 )
 from schemas import (
     MovieListResponseSchema,
@@ -301,7 +301,7 @@ async def update_movie(
             setattr(movie, field, value)
 
     try:
-        await movie_update(db, movie)
+        await commit_instance(db, movie)
     except HTTPException:
         await db.rollback()
         raise HTTPException(status_code=400, detail="Invalid input data.")
