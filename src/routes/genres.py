@@ -4,7 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db, Genre
-from database.crud.movies import get_all_genres, get_or_create_genre
+from database.crud.movies import (
+    get_all_genres,
+    get_or_create_genre,
+    delete_instance,
+    get_genre_by_id,
+)
 from schemas import GenreResponseSchema, GenresSchema
 
 router = APIRouter()
@@ -14,11 +19,6 @@ router = APIRouter()
     "/",
     summary="Get list of all genres",
     response_model=List[GenreResponseSchema],
-    description=(
-        "Fetches a list of all movie genres available in the database. "
-        "Each genre includes its unique ID and name. This endpoint is useful "
-        "for filtering movies by genre or displaying a category list to users."
-    ),
     response_description="A list of genres, each containing an ID and name.",
 )
 async def get_genres(
@@ -84,3 +84,49 @@ async def create_genre(
         )
 
     return GenreResponseSchema.model_validate(genre)
+
+
+@router.delete(
+    "/{genre_id}/",
+    summary="Delete a genre by ID",
+    status_code=204,
+    responses={
+        204: {
+            "description": "Genre deleted successfully."
+        },
+        404: {
+            "description": "Genre not found.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Genre with the given ID was not found."
+                    }
+                }
+            },
+        },
+    },
+)
+async def delete_genre(
+        genre_id: int,
+        db: AsyncSession = Depends(get_db),
+) -> None:
+    """
+       Delete a specific genre from the database by its unique ID.
+
+       This function removes a genre from the database.
+       If the genre does not exist,
+       a 404 error is raised.
+
+       Returns:
+       - No content (status code 204) on successful deletion.
+
+       Raises:
+       - `HTTPException 404`: If the genre with the given ID does not exist.
+       """
+    genre = await get_genre_by_id(db, genre_id)
+
+    if not genre:
+        raise HTTPException(status_code=404, detail="Genre not found")
+
+    await delete_instance(db, genre)
+    return

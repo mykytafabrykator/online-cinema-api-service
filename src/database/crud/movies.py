@@ -281,3 +281,8 @@ async def get_or_create_genre(
     await db.refresh(genre)
 
     return genre, True
+
+
+async def get_genre_by_id(db: AsyncSession, genre_id: int) -> Optional[Genre]:
+    result = await db.execute(select(Genre).filter_by(id=genre_id))
+    return result.scalars().first()
