@@ -9,6 +9,7 @@ from database.crud.movies import (
     get_movie_by_id,
     get_movie_by_name,
     create_movie_post,
+    delete_instance,
 )
 from schemas import (
     MovieListResponseSchema,
@@ -178,3 +179,49 @@ async def create_movie(
     except HTTPException:
         await db.rollback()
         raise HTTPException(status_code=400, detail="Invalid input data.")
+
+
+@router.delete(
+    "/{movie_id}/",
+    summary="Delete a movie by ID",
+    status_code=204,
+    responses={
+        204: {
+            "description": "Movie deleted successfully."
+        },
+        404: {
+            "description": "Movie not found.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Movie with the given ID was not found."
+                    }
+                }
+            },
+        },
+    },
+)
+async def delete_movie(
+        movie_id: int,
+        db: AsyncSession = Depends(get_db),
+) -> None:
+    """
+       Delete a specific movie from the database by its unique ID.
+
+       This function removes a movie from the database.
+       If the movie does not exist,
+       a 404 error is raised.
+
+       Returns:
+       - No content (status code 204) on successful deletion.
+
+       Raises:
+       - `HTTPException 404`: If the movie with the given ID does not exist.
+       """
+    movie = await get_movie_by_id(db, movie_id)
+
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    await delete_instance(db, movie)
+    return
