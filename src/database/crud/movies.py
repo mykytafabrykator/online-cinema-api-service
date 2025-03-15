@@ -225,7 +225,6 @@ async def toggle_movie_favorite(
         db: AsyncSession,
         movie: Movie,
         user_id: int,
-        is_favorited: bool
 ) -> FavoriteMovie:
     result = await db.execute(
         select(FavoriteMovie).filter_by(movie_id=movie.id, user_id=user_id)
@@ -233,16 +232,18 @@ async def toggle_movie_favorite(
     movie_fav = result.scalars().first()
 
     if movie_fav:
-        await db.delete(movie_fav)
+        movie_fav.is_favorited = not movie_fav.is_favorited
+        movie_fav.created_at = now()
     else:
         movie_fav = FavoriteMovie(
             user_id=user_id,
             movie_id=movie.id,
-            is_favorited=is_favorited
+            is_favorited=True
         )
         db.add(movie_fav)
 
-    await db.commit()
+    await commit_instance(db, movie_fav)
+
     return movie_fav
 
 

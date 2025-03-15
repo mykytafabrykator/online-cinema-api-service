@@ -13,7 +13,7 @@ from database.crud.movies import (
     create_movie_post,
     delete_instance,
     commit_instance,
-    toggle_movie_like,
+    toggle_movie_like, toggle_movie_favorite,
 )
 from database.models.movies import MovieLike
 from schemas import (
@@ -24,7 +24,7 @@ from schemas import (
     MovieCreateSchema,
     DetailMessageSchema,
     MovieUpdateSchema,
-    MovieLikeResponseSchema,
+    MovieLikeResponseSchema, MovieFavoriteResponseSchema,
 )
 from security import JWTAuthManagerInterface
 from security.http import get_token
@@ -393,4 +393,84 @@ async def like_or_dislike(
         created_at=movie_like.created_at,
         user=user,
         movie=movie,
+    )
+
+
+@router.post(
+    "/{movie_id}/favorite/",
+    response_model=MovieFavoriteResponseSchema,
+    summary="Add or remove a movie from favorites",
+    responses={
+        200: {"description": "Movie favorite status updated."},
+        404: {
+            "description": "Movie or user not found.",
+            "content": {
+                "application/json":
+                    {
+                        "example": {
+                            "detail": "Movie with the given ID was not found."
+                        }
+                    }
+            }
+        },
+        401: {
+            "description": "Unauthorized access.",
+            "content":
+                {
+                    "application/json":
+                        {
+                            "example":
+                                {
+                                    "detail": "Invalid or expired token."
+                                }
+                        }
+                }
+        },
+    }
+)
+async def favorite_or_unfavorite(
+        movie_id: int,
+        token: str = Depends(get_token),
+        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
+        db: AsyncSession = Depends(get_db),
+) -> MovieFavoriteResponseSchema:
+    """
+    Toggle favorite status for a specific movie.
+
+    **Parameters:**
+    - `movie_id` (int): The unique identifier of the movie.
+    - `token` (str): User authentication token.
+
+    **Returns:**
+    - `MovieFavoriteResponseSchema`: The updated favorite status and
+    associated movie/user info.
+
+    **Raises:**
+    - `HTTPException 404`: If the movie or user is not found.
+    - `HTTPException 401`: If the token is invalid or expired.
+    """
+    movie = await get_movie_by_id(db, movie_id)
+    if not movie:
+        raise HTTPException(
+            status_code=404,
+            detail="Movie with the given ID was not found."
+        )
+
+    token_data = jwt_manager.decode_access_token(token)
+    user_id = token_data["user_id"]
+
+    user = await get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User with the given ID was not found."
+        )
+
+    movie_favorite = await toggle_movie_favorite(db, movie, user_id)
+
+    return MovieFavoriteResponseSchema(
+        is_favorited=movie_favorite.is_favorited,
+        created_at=movie_favorite.created_at,
+        user=movie_favorite.user,
+        movie=movie_favorite.movie,
     )
