@@ -239,4 +239,32 @@ async def checkout(
     )
 
 
+@router.get(
+    "/purchased/",
+    response_model=PurchasedMoviesResponse,
+    summary="Retrieve purchased movies",
+    responses={
+        404: {"description": "User not found."},
+        401: {"description": "Unauthorized request."}
+    }
+)
+async def get_purchased_movies(
+        db: AsyncSession = Depends(get_db),
+        token: str = Depends(get_token),
+        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager)
+) -> PurchasedMoviesResponse:
 
+    token_data = jwt_manager.decode_access_token(token)
+    user_id = token_data["user_id"]
+
+    user = await get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User with the given ID was not found."
+        )
+
+    purchased_movies = await get_purchased_movies_from_db(user, db)
+    return PurchasedMoviesResponse(
+        purchased_movies=[movie.name for movie in purchased_movies]
+    )
