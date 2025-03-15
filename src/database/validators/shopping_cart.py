@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from database import Cart, CartItem, Movie, User
+from database import Cart, CartItem, Movie, User, OrderItem, Order
 
 
 async def validate_movie_availability(movie: Movie | None) -> None:
@@ -19,13 +19,17 @@ async def validate_not_purchased(
         db: AsyncSession
 ) -> None:
     result = await db.execute(
-        select(CartItem)
-        .join(Cart)
+        select(1)
+        .select_from(OrderItem)
+        .join(Order, OrderItem.order_id == Order.id)
         .filter(
-            Cart.user_id == user.id,
-            CartItem.movie_id == movie.id
+            Order.user_id == user.id,
+            Order.status == "paid",
+            OrderItem.movie_id == movie.id
         )
+        .limit(1)
     )
+
     purchased_movie = result.scalars().first()
 
     if purchased_movie:

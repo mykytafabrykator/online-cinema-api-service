@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from routes import accounts, profiles, movies, genres, stars
+from routes import accounts, profiles, movies, genres, stars, shopping_cart
 
 app = FastAPI(
     title="Online Cinema API",
@@ -18,6 +18,11 @@ app.include_router(profiles.router, prefix="/profiles", tags=["Profile"])
 app.include_router(movies.router, prefix="/movies", tags=["Movies"])
 app.include_router(genres.router, prefix="/genres", tags=["Genres"])
 app.include_router(stars.router, prefix="/stars", tags=["Stars"])
+app.include_router(
+    shopping_cart.router,
+    prefix="/shopping-cart",
+    tags=["Shopping Cart"]
+)
 
 
 @app.get("/")
