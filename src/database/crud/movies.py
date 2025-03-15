@@ -74,7 +74,16 @@ async def filter_movies(
 
 
 async def get_movie_by_id(db: AsyncSession, movie_id: int) -> Optional[Movie]:
-    result = await db.execute(select(Movie).filter(Movie.id == movie_id))
+    result = await db.execute(
+        select(Movie)
+        .options(
+            joinedload(Movie.certification),
+            joinedload(Movie.genres),
+            joinedload(Movie.stars),
+            joinedload(Movie.directors),
+        )
+        .filter(Movie.id == movie_id)
+    )
     return result.scalars().first()
 
 
