@@ -188,4 +188,55 @@ async def clear_cart(
     return CartItemResponse(message="Cart cleared successfully")
 
 
+@router.post(
+    "/checkout/",
+    response_model=MessageResponseSchema,
+    summary="Checkout and complete purchase",
+    responses={
+        404: {"description": "User not found."},
+        403: {"description": "User not activated."},
+        400: {"description": "Cart is empty."},
+        401: {"description": "Unauthorized request."}
+    }
+)
+async def checkout(
+        db: AsyncSession = Depends(get_db),
+        token: str = Depends(get_token),
+        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager)
+) -> MessageResponseSchema:
+
+    token_data = jwt_manager.decode_access_token(token)
+    user_id = token_data["user_id"]
+
+    user = await get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User with the given ID was not found."
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="Please activate your account before making a purchase."
+        )
+
+    cart = await get_user_cart(user, db)
+    if not cart or not cart.items:
+        raise HTTPException(status_code=400, detail="Your cart is empty")
+
+    order = Order(
+        user_id=user.id,
+        total_amount=sum(item.movie.price for item in cart.items)
+    )
+
+    await create_order(db, order)
+
+    await process_order_payment_and_clear_cart(db, user, order, cart)
+
+    return MessageResponseSchema(
+        message="Order placed successfully. Payment has been created."
+    )
+
+
 
