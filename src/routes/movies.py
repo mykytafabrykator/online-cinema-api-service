@@ -15,7 +15,6 @@ from database.crud.movies import (
     commit_instance,
     toggle_movie_like, toggle_movie_favorite,
 )
-from database.models.movies import MovieLike
 from schemas import (
     MovieListResponseSchema,
     MovieSortEnum,
