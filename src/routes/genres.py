@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db, Genre
 from database.crud.movies import (
-    get_all_genres,
-    get_or_create_genre,
+    get_all_instances,
+    get_or_create_model,
     delete_instance,
     get_genre_by_id,
     commit_instance,
@@ -34,7 +34,7 @@ async def get_genres(
     Raises:
         HTTPException 500: If there is an issue retrieving genres.
     """
-    return await get_all_genres(db)
+    return await get_all_instances(db, Genre)
 
 
 @router.post(
@@ -76,7 +76,7 @@ async def create_genre(
     Raises:
         HTTPException 409: If the genre already exists.
     """
-    genre, created = await get_or_create_genre(db, genre_data.name)
+    genre, created = await get_or_create_model(db, Genre, genre_data.name)
 
     if not created:
         raise HTTPException(

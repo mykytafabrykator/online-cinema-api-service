@@ -255,27 +255,28 @@ async def commit_instance(db: AsyncSession, instance: Any) -> None:
     await db.refresh(instance)
 
 
-async def get_all_genres(db: AsyncSession) -> list[Genre]:
-    result = await db.execute(select(Genre))
+async def get_all_instances(db: AsyncSession, instance: Any) -> list[Any]:
+    result = await db.execute(select(instance))
     return result.scalars().all()
 
 
-async def get_or_create_genre(
+async def get_or_create_model(
         db: AsyncSession,
+        instance: Any,
         name: str
-) -> tuple[Genre, bool]:
-    result = await db.execute(select(Genre).filter_by(name=name))
-    genre = result.scalars().first()
+) -> tuple[Any, bool]:
+    result = await db.execute(select(instance).filter_by(name=name))
+    model = result.scalars().first()
 
-    if genre:
-        return genre, False
+    if model:
+        return model, False
 
-    genre = Genre(name=name)
-    db.add(genre)
+    model = instance(name=name)
+    db.add(model)
     await db.commit()
-    await db.refresh(genre)
+    await db.refresh(model)
 
-    return genre, True
+    return model, True
 
 
 async def get_genre_by_id(db: AsyncSession, genre_id: int) -> Optional[Genre]:
