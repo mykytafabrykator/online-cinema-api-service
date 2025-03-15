@@ -263,3 +263,21 @@ async def movie_update(db: AsyncSession, movie: Movie) -> None:
 async def get_all_genres(db: AsyncSession) -> list[Genre]:
     result = await db.execute(select(Genre))
     return result.scalars().all()
+
+
+async def get_or_create_genre(
+        db: AsyncSession,
+        name: str
+) -> tuple[Genre, bool]:
+    result = await db.execute(select(Genre).filter_by(name=name))
+    genre = result.scalars().first()
+
+    if genre:
+        return genre, False
+
+    genre = Genre(name=name)
+    db.add(genre)
+    await db.commit()
+    await db.refresh(genre)
+
+    return genre, True
