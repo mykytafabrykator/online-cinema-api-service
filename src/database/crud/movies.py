@@ -279,6 +279,10 @@ async def get_or_create_model(
     return model, True
 
 
-async def get_instance_by_id(db: AsyncSession, instance: Any, instance_id: int) -> Optional[Any]:
+async def get_instance_by_id(
+        db: AsyncSession,
+        instance: Any,
+        instance_id: int
+) -> Optional[Any]:
     result = await db.execute(select(instance).filter_by(id=instance_id))
     return result.scalars().first()
