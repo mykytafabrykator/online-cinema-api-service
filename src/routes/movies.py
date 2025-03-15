@@ -10,6 +10,7 @@ from database.crud.movies import (
     get_movie_by_name,
     create_movie_post,
     delete_instance,
+    movie_update,
 )
 from schemas import (
     MovieListResponseSchema,
@@ -17,6 +18,8 @@ from schemas import (
     MovieListItemSchema,
     MovieDetailSchema,
     MovieCreateSchema,
+    DetailMessageSchema,
+    MovieUpdateSchema,
 )
 
 router = APIRouter()
@@ -225,3 +228,82 @@ async def delete_movie(
 
     await delete_instance(db, movie)
     return
+
+
+@router.patch(
+    "/{movie_id}/",
+    response_model=DetailMessageSchema,
+    summary="Update movie by ID",
+    status_code=200,
+    responses={
+        200: {
+            "description": "Movie updated successfully.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Movie updated successfully."}
+                }
+            },
+        },
+        400: {
+            "description": "Invalid input data.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid input data."}
+                }
+            },
+        },
+        404: {
+            "description": "Movie not found.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Movie not found."}
+                }
+            },
+        },
+    },
+)
+async def update_movie(
+        movie_id: int,
+        movie_data: MovieUpdateSchema,
+        db: AsyncSession = Depends(get_db),
+) -> DetailMessageSchema:
+    """
+    Updates an existing movie by its ID with partial or full data.
+
+    This endpoint allows users to update movie details such as name,
+    year, duration, IMDb rating, votes, price, description, and more.
+
+    - Fields that are not provided in the request body remain unchanged.
+    - Updating related entities like genres, stars, and directors
+    is **not allowed**.
+
+    Args:
+        movie_id (int): The ID of the movie to be updated.
+        movie_data (MovieUpdateSchema):
+        The updated movie data (only the fields that need to be modified).
+        db (AsyncSession, optional): The database session dependency.
+
+    Returns:
+    - DetailMessageSchema: A success message if
+    the movie is updated successfully.
+
+    Raises:
+    - HTTPException 404: If the movie with the given ID does not exist.
+    - HTTPException 400: If the provided input data is invalid.
+    """
+    movie = await get_movie_by_id(db, movie_id)
+
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    for field, value in movie_data.model_dump(exclude_unset=True).items():
+        if value is not None:
+            setattr(movie, field, value)
+
+    try:
+        await movie_update(db, movie)
+    except HTTPException:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail="Invalid input data.")
+    else:
+        return DetailMessageSchema(detail="Movie updated successfully.")

@@ -253,3 +253,8 @@ async def delete_instance(db: AsyncSession, instance: Any) -> None:
 async def commit_instance(db: AsyncSession, instance: Any) -> None:
     await db.commit()
     await db.refresh(instance)
+
+
+async def movie_update(db: AsyncSession, movie: Movie) -> None:
+    await db.commit()
+    await db.refresh(movie)
