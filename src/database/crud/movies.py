@@ -171,7 +171,19 @@ async def create_movie_post(
     await db.commit()
     await db.refresh(movie)
 
-    return movie
+    result = await db.execute(
+        select(Movie)
+        .options(
+            joinedload(Movie.certification),
+            joinedload(Movie.genres),
+            joinedload(Movie.stars),
+            joinedload(Movie.directors),
+        )
+        .filter(Movie.id == movie.id)
+    )
+    movie_with_relations = result.scalars().first()
+
+    return movie_with_relations
 
 
 async def toggle_movie_like(

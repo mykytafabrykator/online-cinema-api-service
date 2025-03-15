@@ -4,12 +4,18 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from database.crud.movies import filter_movies, get_movie_by_id
+from database.crud.movies import (
+    filter_movies,
+    get_movie_by_id,
+    get_movie_by_name,
+    create_movie_post,
+)
 from schemas import (
     MovieListResponseSchema,
     MovieSortEnum,
     MovieListItemSchema,
-    MovieDetailSchema
+    MovieDetailSchema,
+    MovieCreateSchema,
 )
 
 router = APIRouter()
@@ -130,3 +136,45 @@ async def get_movie_detail(
         raise HTTPException(status_code=404, detail="Movie not found")
 
     return MovieDetailSchema.model_validate(movie)
+
+
+@router.post(
+    "/",
+    response_model=MovieDetailSchema,
+    status_code=201,
+    summary="Create a new movie",
+)
+async def create_movie(
+        movie_data: MovieCreateSchema,
+        db: AsyncSession = Depends(get_db),
+) -> MovieDetailSchema:
+    """
+       Creates a new movie entry in the database.
+
+       Args:
+           movie_data (MovieCreateSchema): The movie details to be created.
+           db (AsyncSession): Database session dependency.
+
+       Returns:
+           MovieDetailSchema: The created movie details
+           including genres, stars, and directors.
+
+       Raises:
+           HTTPException 409: If a movie with the same name,
+           year, and time already exists.
+           HTTPException 400: If the provided data is invalid.
+       """
+    existing_movie = await get_movie_by_name(db, movie_data)
+
+    if existing_movie:
+        raise HTTPException(
+            status_code=409,
+            detail="Movie already exists.",
+        )
+
+    try:
+        movie = await create_movie_post(db, movie_data)
+        return MovieDetailSchema.model_validate(movie)
+    except HTTPException:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail="Invalid input data.")
