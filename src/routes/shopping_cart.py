@@ -154,3 +154,38 @@ async def remove_from_cart(
     return CartItemResponse(message="Movie removed from cart")
 
 
+@router.delete(
+    "/clear/",
+    response_model=CartItemResponse,
+    summary="Clear the shopping cart",
+    responses={
+        404: {"description": "Cart already empty."},
+        401: {"description": "Unauthorized request."}
+    }
+)
+async def clear_cart(
+        db: AsyncSession = Depends(get_db),
+        token: str = Depends(get_token),
+        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager)
+) -> CartItemResponse:
+
+    token_data = jwt_manager.decode_access_token(token)
+    user_id = token_data["user_id"]
+
+    user = await get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User with the given ID was not found."
+        )
+
+    cart = await get_user_cart(user, db)
+    if not cart or not cart.items:
+        raise HTTPException(status_code=404, detail="Cart is already empty")
+
+    await delete_cart_item_by_cart(db, cart.id)
+
+    return CartItemResponse(message="Cart cleared successfully")
+
+
+
