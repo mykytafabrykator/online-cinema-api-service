@@ -38,27 +38,36 @@ async def filter_movies(
 ) -> list[Movie]:
     query = select(Movie)
 
-    if "name" in filters:
+    if filters.get("name"):
         query = query.filter(Movie.name.ilike(f"%{filters['name']}%"))
-    if "year" in filters:
+    if filters.get("year") is not None:
         query = query.filter(Movie.year == filters["year"])
-    if "min_imdb" in filters:
-        query = query.filter(Movie.imdb >= filters["min_imdb"])
-    if "max_imdb" in filters:
-        query = query.filter(Movie.imdb <= filters["max_imdb"])
-    if "min_votes" in filters:
-        query = query.filter(Movie.votes >= filters["min_votes"])
-    if "max_votes" in filters:
-        query = query.filter(Movie.votes <= filters["max_votes"])
-    if "min_price" in filters:
-        query = query.filter(Movie.price >= filters["min_price"])
-    if "max_price" in filters:
-        query = query.filter(Movie.price <= filters["max_price"])
+    if filters.get("min_imdb") is not None:
+        query = query.filter(Movie.imdb >= float(filters["min_imdb"]))
+    if filters.get("max_imdb") is not None:
+        query = query.filter(Movie.imdb <= float(filters["max_imdb"]))
+    if filters.get("min_price") is not None:
+        query = query.filter(Movie.price >= float(filters["min_price"]))
+    if filters.get("max_price") is not None:
+        query = query.filter(Movie.price <= float(filters["max_price"]))
 
     if sort_by:
-        query = query.order_by(getattr(Movie, sort_by.value))
-    else:
-        query = query.order_by(Movie.id)
+        if sort_by == MovieSortEnum.PRICE_ASC:
+            query = query.order_by(Movie.price)
+        elif sort_by == MovieSortEnum.PRICE_DESC:
+            query = query.order_by(Movie.price.desc())
+        elif sort_by == MovieSortEnum.RELEASE_YEAR_ASC:
+            query = query.order_by(Movie.year)
+        elif sort_by == MovieSortEnum.RELEASE_YEAR_DESC:
+            query = query.order_by(Movie.year.desc())
+        elif sort_by == MovieSortEnum.VOTES_ASC:
+            query = query.order_by(Movie.votes)
+        elif sort_by == MovieSortEnum.VOTES_DESC:
+            query = query.order_by(Movie.votes.desc())
+        elif sort_by == MovieSortEnum.IMDb_ASC:
+            query = query.order_by(Movie.imdb)
+        elif sort_by == MovieSortEnum.IMDb_DESC:
+            query = query.order_by(Movie.imdb.desc())
 
     result = await db.execute(query)
     return result.scalars().all()
