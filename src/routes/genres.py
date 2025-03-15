@@ -9,8 +9,9 @@ from database.crud.movies import (
     get_or_create_genre,
     delete_instance,
     get_genre_by_id,
+    commit_instance,
 )
-from schemas import GenreResponseSchema, GenresSchema
+from schemas import GenreResponseSchema, GenresSchema, DetailMessageSchema
 
 router = APIRouter()
 
@@ -130,3 +131,61 @@ async def delete_genre(
 
     await delete_instance(db, genre)
     return
+
+
+@router.patch(
+    "/{genre_id}/",
+    response_model=DetailMessageSchema,
+    summary="Update genre by ID",
+    status_code=200,
+    responses={
+        200: {
+            "description": "Genre updated successfully.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Genre updated successfully."}
+                }
+            },
+        },
+        400: {
+            "description": "Invalid input data.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid input data."}
+                }
+            },
+        },
+        404: {
+            "description": "Genre not found.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Genre not found."}
+                }
+            },
+        },
+    },
+)
+async def update_genre(
+        genre_id: int,
+        genre_data: GenresSchema,
+        db: AsyncSession = Depends(get_db),
+) -> DetailMessageSchema:
+    """
+    Updates an existing genre by its ID with provided data.
+    """
+    genre = await get_genre_by_id(db, genre_id)
+
+    if not genre:
+        raise HTTPException(status_code=404, detail="Genre not found")
+
+    for field, value in genre_data.model_dump(exclude_unset=True).items():
+        if value is not None:
+            setattr(genre, field, value)
+
+    try:
+        await commit_instance(db, genre)
+    except HTTPException:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail="Invalid input data.")
+    else:
+        return DetailMessageSchema(detail="Genre updated successfully.")
