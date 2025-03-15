@@ -279,6 +279,6 @@ async def get_or_create_model(
     return model, True
 
 
-async def get_genre_by_id(db: AsyncSession, genre_id: int) -> Optional[Genre]:
-    result = await db.execute(select(Genre).filter_by(id=genre_id))
+async def get_instance_by_id(db: AsyncSession, instance: Any, instance_id: int) -> Optional[Any]:
+    result = await db.execute(select(instance).filter_by(id=instance_id))
     return result.scalars().first()

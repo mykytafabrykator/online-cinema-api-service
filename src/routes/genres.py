@@ -8,7 +8,7 @@ from database.crud.movies import (
     get_all_instances,
     get_or_create_model,
     delete_instance,
-    get_genre_by_id,
+    get_instance_by_id,
     commit_instance,
 )
 from schemas import GenreResponseSchema, GenresSchema, DetailMessageSchema
@@ -124,7 +124,7 @@ async def delete_genre(
        Raises:
        - `HTTPException 404`: If the genre with the given ID does not exist.
        """
-    genre = await get_genre_by_id(db, genre_id)
+    genre = await get_instance_by_id(db, Genre, genre_id)
 
     if not genre:
         raise HTTPException(status_code=404, detail="Genre not found")
@@ -173,7 +173,7 @@ async def update_genre(
     """
     Updates an existing genre by its ID with provided data.
     """
-    genre = await get_genre_by_id(db, genre_id)
+    genre = await get_instance_by_id(db, Genre, genre_id)
 
     if not genre:
         raise HTTPException(status_code=404, detail="Genre not found")
