@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy import delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from database import (
     Cart,
@@ -21,12 +21,11 @@ from schemas import CartItemDetail
 
 
 async def get_user_cart(user: User, db: AsyncSession) -> Optional[Cart]:
-    result = await db.execute(select(Cart).filter(Cart.user_id == user.id))
-    return result.scalars().first()
-
-
-async def get_movie_by_id(movie_id: int, db: AsyncSession) -> Optional[Movie]:
-    result = await db.execute(select(Movie).filter(Movie.id == movie_id))
+    result = await db.execute(
+        select(Cart)
+        .options(selectinload(Cart.items).joinedload(CartItem.movie))
+        .filter(Cart.user_id == user.id)
+    )
     return result.scalars().first()
 
 
@@ -102,7 +101,6 @@ async def create_order_items(
         db.add(order_item)
         order_items.append(order_item)
 
-    await db.commit()
     return order_items
 
 
@@ -152,6 +150,8 @@ async def process_order_payment_and_clear_cart(
 
     await delete_cart_item_by_cart(db, cart.id)
 
+    await db.commit()
+
     return payment
 
 
@@ -173,10 +173,9 @@ async def get_purchased_movies_from_db(
 ) -> List[Movie]:
     result = await db.execute(
         select(Movie)
-        .join(CartItem)
-        .join(Cart)
-        .join(Order, Order.user_id == Cart.user_id)
-        .filter(Order.user_id == user.id)
+        .join(OrderItem)
+        .join(Order)
+        .filter(Order.user_id == user.id, Order.status == "paid")
         .distinct()
     )
     return cast(List[Movie], result.scalars().all())
@@ -190,11 +189,12 @@ async def get_cart_items_details(
         return []
 
     result = await db.execute(
-        select(Cart)
-        .options(joinedload(Cart.items).joinedload(CartItem.movie))
-        .filter(Cart.user_id == cart.user_id)
+        select(CartItem)
+        .options(joinedload(CartItem.movie).joinedload(Movie.genres))
+        .filter(CartItem.cart_id == cart.id)
     )
-    cart = result.scalars().first()
+
+    cart_items = result.unique().scalars().all()
 
     return [
         CartItemDetail(
@@ -204,5 +204,5 @@ async def get_cart_items_details(
             genre=item.movie.genres[0].name if item.movie.genres else "Unknown",  # noqa: E501
             release_year=item.movie.year
         )
-        for item in cart.items
-    ] if cart else []
+        for item in cart_items
+    ]
