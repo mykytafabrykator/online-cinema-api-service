@@ -109,11 +109,11 @@ class MovieDetailSchema(MovieBaseSchema):
 
 class MovieUpdateSchema(BaseModel):
     name: Optional[str] = Field(None, max_length=255)
-    year: Optional[int]
+    year: Optional[int] = Field(None, ge=1888, le=datetime.now().year)
     time: Optional[int] = Field(None, ge=0)
     imdb: Optional[float] = Field(None, ge=0, le=10)
     votes: Optional[int] = Field(None, ge=0)
-    description: Optional[str]
+    description: Optional[str] = Field(None, max_length=500)
     price: Optional[float] = Field(None, ge=0)
     meta_score: Optional[float] = Field(None, ge=0, le=100)
     gross: Optional[float] = Field(None, ge=0)
