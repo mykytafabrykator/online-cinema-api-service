@@ -100,7 +100,7 @@ async def get_user_orders(
     query = query.order_by(Order.created_at.desc())
 
     result = await db.execute(query)
-    orders = result.scalars().all()
+    orders = result.scalars().unique().all()
 
     if not orders:
         raise HTTPException(
@@ -109,6 +109,7 @@ async def get_user_orders(
 
     return [
         OrderItemResponseSchema(
+            id=order.id,
             created_at=order.created_at,
             movie=[
                 MovieListItemSchema(
@@ -131,7 +132,14 @@ async def get_order_by_id(
         db: AsyncSession, order_id: int, current_user_id: Optional[int] = None
 ) -> Order:
     """Retrieve an order by ID and check permissions."""
-    result = await db.execute(select(Order).filter(Order.id == order_id))
+    result = await db.execute(
+        select(Order)
+        .options(
+            joinedload(Order.order_items)
+            .joinedload(OrderItem.movie)
+        )
+        .filter(Order.id == order_id)
+    )
     order = result.scalars().first()
 
     if not order:
@@ -151,6 +159,7 @@ async def get_order_by_id(
 async def format_order_detail(order: Order) -> OrderItemResponseSchema:
     """Format the order details for the response."""
     return OrderItemResponseSchema(
+        id=order.id,
         created_at=order.created_at,
         movie=[
             MovieListItemSchema(
