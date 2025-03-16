@@ -1,0 +1,36 @@
+[project]
+name = "fastapi-cinema-service"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Mykyta Fabrykator",email = "mykyta.fabrykator@gmail.com"}
+]
+readme = "README.md"
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = {extras = ["standard"], version = "^0.115.11"}
+flake8 = "^7.1.2"
+sqlalchemy = "^2.0.39"
+alembic = "^1.15.1"
+pydantic-settings = "^2.8.1"
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+aiosqlite = "^0.21.0"
+asyncpg = "^0.30.0"
+psycopg2 = "^2.9.10"
+python-jose = "^3.4.0"
+aiosmtplib = "^4.0.0"
+celery = {extras = ["redis"], version = "^5.4.0"}
+asgiref = "^3.8.1"
+aioboto3 = "^14.1.0"
+pillow = "^11.1.0"
+stripe = "^11.6.0"
+
+[tool.poetry.group.dev.dependencies]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
