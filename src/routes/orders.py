@@ -1,19 +1,16 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import get_jwt_auth_manager
-from database import get_db
-from database.crud.accounts import get_user_by_id
+from database import get_db, User
 from database.crud.orders import (
     get_user_orders,
     format_order_detail,
     get_order_by_id,
 )
 from schemas.orders import OrderItemResponseSchema
-from security import JWTAuthManagerInterface
-from security.http import get_token
+from utils import get_current_user
 
 router = APIRouter()
 
@@ -30,20 +27,8 @@ router = APIRouter()
 )
 async def get_user_orders_route(
     db: AsyncSession = Depends(get_db),
-    token: str = Depends(get_token),
-    jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager)
+    user: User = Depends(get_current_user)
 ) -> List[OrderItemResponseSchema]:
-
-    token_data = jwt_manager.decode_access_token(token)
-    user_id = token_data["user_id"]
-
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User with the given ID was not found."
-        )
-
     return await get_user_orders(current_user=user, db=db)
 
 
@@ -96,20 +81,9 @@ async def get_user_orders_route(
 )
 async def get_order_detail(
     order_id: int,
-    token: str = Depends(get_token),
-    jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user)
 ) -> OrderItemResponseSchema:
-    token_data = jwt_manager.decode_access_token(token)
-    user_id = token_data["user_id"]
-
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User with the given ID was not found."
-        )
-
-    order = await get_order_by_id(db, order_id, user_id)
+    order = await get_order_by_id(db, order_id, user.id)
 
     return await format_order_detail(order)

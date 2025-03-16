@@ -4,17 +4,13 @@ from typing import Optional
 from fastapi import (
     APIRouter,
     Depends,
-    HTTPException,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import get_jwt_auth_manager
-from database import PaymentStatusEnum, get_db
-from database.crud.accounts import get_user_by_id
+from database import PaymentStatusEnum, get_db, User
 from database.crud.payments import get_user_payments
 from schemas import PaymentHistoryResponse
-from security.http import get_token
-from security.interfaces import JWTAuthManagerInterface
+from utils import get_current_user
 
 router = APIRouter()
 
@@ -50,23 +46,11 @@ async def read_payments(
     end_date: Optional[datetime] = None,
     payment_status: Optional[PaymentStatusEnum] = None,
     db: AsyncSession = Depends(get_db),
-    token: str = Depends(get_token),
-    jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager)
+    user: User = Depends(get_current_user)
 ) -> list[PaymentHistoryResponse]:
-
-    token_data = jwt_manager.decode_access_token(token)
-    user_id = token_data["user_id"]
-
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User with the given ID was not found."
-        )
-
     payments = await get_user_payments(
         db=db,
-        user_id=user_id,
+        user_id=user.id,
         start_date=start_date,
         end_date=end_date,
         payment_status=payment_status

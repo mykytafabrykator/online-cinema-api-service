@@ -3,9 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import get_jwt_auth_manager
-from database import get_db
-from database.crud.accounts import get_user_by_id
+from database import get_db, User
 from database.crud.movies import (
     filter_movies,
     get_movie_by_id,
@@ -13,7 +11,8 @@ from database.crud.movies import (
     create_movie_post,
     delete_instance,
     commit_instance,
-    toggle_movie_like, toggle_movie_favorite,
+    toggle_movie_like,
+    toggle_movie_favorite,
 )
 from schemas import (
     MovieListResponseSchema,
@@ -23,10 +22,10 @@ from schemas import (
     MovieCreateSchema,
     DetailMessageSchema,
     MovieUpdateSchema,
-    MovieLikeResponseSchema, MovieFavoriteResponseSchema,
+    MovieLikeResponseSchema,
+    MovieFavoriteResponseSchema,
 )
-from security import JWTAuthManagerInterface
-from security.http import get_token
+from utils import get_current_user
 
 router = APIRouter()
 
@@ -349,16 +348,14 @@ async def update_movie(
 )
 async def like_or_dislike(
         movie_id: int,
-        token: str = Depends(get_token),
-        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
         db: AsyncSession = Depends(get_db),
+        user: User = Depends(get_current_user)
 ) -> MovieLikeResponseSchema:
     """
     Toggle like or dislike for a specific movie.
 
     **Parameters:**
     - `movie_id` (int): The unique identifier of the movie.
-    - `token` (str): User authentication token.
 
     **Returns:**
     - `MovieLikeResponseSchema`: The updated like status and
@@ -375,17 +372,7 @@ async def like_or_dislike(
             detail="Movie with the given ID was not found."
         )
 
-    token_data = jwt_manager.decode_access_token(token)
-    user_id = token_data["user_id"]
-
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User with the given ID was not found."
-        )
-
-    movie_like = await toggle_movie_like(db, movie, user_id)
+    movie_like = await toggle_movie_like(db, movie, user.id)
 
     return MovieLikeResponseSchema(
         is_liked=movie_like.is_liked,
@@ -429,16 +416,14 @@ async def like_or_dislike(
 )
 async def favorite_or_unfavorite(
         movie_id: int,
-        token: str = Depends(get_token),
-        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
         db: AsyncSession = Depends(get_db),
+        user: User = Depends(get_current_user)
 ) -> MovieFavoriteResponseSchema:
     """
     Toggle favorite status for a specific movie.
 
     **Parameters:**
     - `movie_id` (int): The unique identifier of the movie.
-    - `token` (str): User authentication token.
 
     **Returns:**
     - `MovieFavoriteResponseSchema`: The updated favorite status and
@@ -455,17 +440,7 @@ async def favorite_or_unfavorite(
             detail="Movie with the given ID was not found."
         )
 
-    token_data = jwt_manager.decode_access_token(token)
-    user_id = token_data["user_id"]
-
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User with the given ID was not found."
-        )
-
-    movie_favorite = await toggle_movie_favorite(db, movie, user_id)
+    movie_favorite = await toggle_movie_favorite(db, movie, user.id)
 
     return MovieFavoriteResponseSchema(
         is_favorited=movie_favorite.is_favorited,

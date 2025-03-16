@@ -45,7 +45,6 @@ class BaseAppSettings(BaseSettings):
 
     STRIPE_SECRET_KEY: str = os.environ["STRIPE_SECRET_KEY"]
     STRIPE_PUBLIC_KEY: str = os.environ["STRIPE_PUBLIC_KEY"]
-    STRIPE_WEBHOOK_SECRET: str = os.environ["STRIPE_WEBHOOK_SECRET"]
 
     REDIS_URL: str = os.environ["REDIS_URL"]
 
