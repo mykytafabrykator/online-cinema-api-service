@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from routes import (
     accounts,
@@ -21,6 +22,14 @@ app = FastAPI(
 )
 
 api_version_prefix = "/api/v1"
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(accounts.router, prefix="/users", tags=["Authentication"])
 app.include_router(profiles.router, prefix="/profiles", tags=["Profile"])

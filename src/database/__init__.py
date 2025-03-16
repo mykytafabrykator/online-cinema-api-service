@@ -30,12 +30,12 @@ from database.models.shopping_cart import Cart, CartItem
 environment = os.getenv("ENVIRONMENT", "developing")
 
 if environment == "testing":
-    from src.database.session_sqlite import (
+    from database.session_sqlite import (
         get_sqlite_db_contextmanager as get_db_contextmanager,
         get_sqlite_db as get_db
     )
 else:
-    from src.database.session_postgresql import (
+    from database.session_postgresql import (
         get_postgresql_db_contextmanager as get_db_contextmanager,
         get_postgresql_db as get_db
     )
