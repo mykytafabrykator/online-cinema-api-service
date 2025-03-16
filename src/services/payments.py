@@ -1,14 +1,15 @@
-import os
-
 import stripe
 
+from config import get_settings
 from database import Order
 
+
+settings = get_settings()
 
 SUCCESS_URL = "http://localhost:8000/api/v1/payments/"
 CANCEL_URL = "http://localhost:8000/api/v1/payments/"
 
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 async def create_stripe_session(order: Order) -> str:
