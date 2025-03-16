@@ -7,7 +7,8 @@ from routes import (
     genres,
     stars,
     shopping_cart,
-    orders
+    orders,
+    payments,
 )
 
 app = FastAPI(
@@ -35,6 +36,11 @@ app.include_router(
     orders.router,
     prefix="/orders",
     tags=["Orders"]
+)
+app.include_router(
+    payments.router,
+    prefix="/payments",
+    tags=["Payments"]
 )
 
 
