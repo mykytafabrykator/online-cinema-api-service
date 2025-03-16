@@ -8,6 +8,7 @@ from database import (
 )
 from database.crud.accounts import get_user_by_id
 from database.crud.movies import get_movie_by_id
+from database.crud.orders import update_order_stripe_url
 from database.crud.shopping_cart import (
     add_cart_item,
     create_cart,
@@ -34,6 +35,7 @@ from database.validators.shopping_cart import (
     validate_not_in_cart,
     validate_not_purchased,
 )
+from services.payments import create_stripe_session
 
 router = APIRouter()
 
@@ -231,6 +233,10 @@ async def checkout(
     )
 
     await create_order(db, order)
+
+    stripe_url = await create_stripe_session(order)
+
+    await update_order_stripe_url(db, order.id, stripe_url)
 
     await process_order_payment_and_clear_cart(db, user, order, cart)
 
