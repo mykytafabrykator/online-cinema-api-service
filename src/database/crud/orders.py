@@ -49,15 +49,22 @@ async def create_order(user_id: int, db: AsyncSession) -> Order:
         )
 
 
-async def update_order_with_stripe_url(
-        order: Order,
-        stripe_url: str,
-        db: AsyncSession
+async def update_order_stripe_url(
+        db: AsyncSession,
+        order_id: int,
+        stripe_url: str
 ) -> None:
-    """Updates the order with a Stripe URL."""
+    """
+    Update an order with the generated Stripe URL.
+    """
+    result = await db.execute(
+        select(Order).filter(Order.id == order_id)
+    )
+    order = result.scalars().first()
     try:
-        order.stripe_url = stripe_url
-        await db.commit()
+        if order:
+            order.stripe_url = stripe_url
+            await db.commit()
     except SQLAlchemyError as e:
         await db.rollback()
         raise HTTPException(
