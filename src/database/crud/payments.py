@@ -1,12 +1,14 @@
+import datetime
 from typing import Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import joinedload
 
 from database import Order, Payment, PaymentItem, PaymentStatusEnum
-from schemas import PaymentCreateSchema
+from schemas import PaymentCreateSchema, PaymentHistoryResponse
 
 
 async def create_payment(
@@ -88,3 +90,43 @@ async def get_payment_by_session_id(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve payment: {str(e)}"
         )
+
+
+async def get_user_payments(
+    db: AsyncSession,
+    user_id: int,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    payment_status: Optional[PaymentStatusEnum] = None
+) -> list[PaymentHistoryResponse]:
+    """Retrieve all payments for a user with optional filtering."""
+
+    filters = [Payment.user_id == user_id]
+
+    if start_date:
+        filters.append(Payment.created_at >= start_date)
+    if end_date:
+        filters.append(Payment.created_at <= end_date)
+    if payment_status:
+        filters.append(Payment.status == payment_status)
+
+    query = (
+        select(Payment)
+        .options(joinedload(Payment.order))
+        .filter(*filters)
+        .order_by(Payment.created_at.desc())
+    )
+
+    result = await db.execute(query)
+    payments = result.scalars().all()
+
+    return [
+        PaymentHistoryResponse(
+            id=payment.id,
+            order_id=payment.order_id,
+            amount=payment.amount,
+            status=payment.status,
+            created_at=payment.created_at,
+            stripe_url=payment.order.stripe_url
+        ) for payment in payments
+    ]

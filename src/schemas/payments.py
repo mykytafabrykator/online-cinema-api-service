@@ -27,6 +27,8 @@ class PaymentHistoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    order_id: int
     amount: Decimal
     status: PaymentStatusEnum
     created_at: datetime
+    stripe_url: Optional[str]
