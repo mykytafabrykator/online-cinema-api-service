@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import get_jwt_auth_manager
 from database import (
     Order,
-    get_db
+    get_db,
+    User
 )
-from database.crud.accounts import get_user_by_id
 from database.crud.movies import get_movie_by_id
 from database.crud.orders import update_order_stripe_url
 from database.crud.shopping_cart import (
@@ -28,14 +27,13 @@ from schemas.shopping_cart import (
     CartResponse,
     PurchasedMoviesResponse,
 )
-from security import JWTAuthManagerInterface
-from security.http import get_token
 from database.validators.shopping_cart import (
     validate_movie_availability,
     validate_not_in_cart,
     validate_not_purchased,
 )
 from services.payments import create_stripe_session
+from utils import get_current_user
 
 router = APIRouter()
 
@@ -51,19 +49,8 @@ router = APIRouter()
 )
 async def get_cart(
         db: AsyncSession = Depends(get_db),
-        token: str = Depends(get_token),
-        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager)
+        user: User = Depends(get_current_user)
 ) -> CartResponse:
-    token_data = jwt_manager.decode_access_token(token)
-    user_id = token_data["user_id"]
-
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User with the given ID was not found."
-        )
-
     cart = await get_user_cart(user, db)
     if not cart:
         return CartResponse(user_id=user.id, movies=[])
@@ -86,20 +73,8 @@ async def get_cart(
 async def add_to_cart(
         cart_data: CartCreate,
         db: AsyncSession = Depends(get_db),
-        token: str = Depends(get_token),
-        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager)
+        user: User = Depends(get_current_user)
 ) -> CartResponse:
-
-    token_data = jwt_manager.decode_access_token(token)
-    user_id = token_data["user_id"]
-
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User with the given ID was not found."
-        )
-
     movie = await get_movie_by_id(db, cart_data.movie_id)
 
     if not movie:
@@ -130,20 +105,8 @@ async def add_to_cart(
 async def remove_from_cart(
         movie_id: int,
         db: AsyncSession = Depends(get_db),
-        token: str = Depends(get_token),
-        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager)
+        user: User = Depends(get_current_user)
 ) -> CartItemResponse:
-
-    token_data = jwt_manager.decode_access_token(token)
-    user_id = token_data["user_id"]
-
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User with the given ID was not found."
-        )
-
     cart = await get_user_cart(user, db)
     if not cart:
         raise HTTPException(status_code=404, detail="Cart not found")
@@ -167,20 +130,8 @@ async def remove_from_cart(
 )
 async def clear_cart(
         db: AsyncSession = Depends(get_db),
-        token: str = Depends(get_token),
-        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager)
+        user: User = Depends(get_current_user)
 ) -> CartItemResponse:
-
-    token_data = jwt_manager.decode_access_token(token)
-    user_id = token_data["user_id"]
-
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User with the given ID was not found."
-        )
-
     cart = await get_user_cart(user, db)
     if not cart or not cart.items:
         raise HTTPException(status_code=404, detail="Cart is already empty")
@@ -203,20 +154,8 @@ async def clear_cart(
 )
 async def checkout(
         db: AsyncSession = Depends(get_db),
-        token: str = Depends(get_token),
-        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager)
+        user: User = Depends(get_current_user)
 ) -> MessageResponseSchema:
-
-    token_data = jwt_manager.decode_access_token(token)
-    user_id = token_data["user_id"]
-
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User with the given ID was not found."
-        )
-
     if not user.is_active:
         raise HTTPException(
             status_code=403,
@@ -256,20 +195,8 @@ async def checkout(
 )
 async def get_purchased_movies(
         db: AsyncSession = Depends(get_db),
-        token: str = Depends(get_token),
-        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager)
+        user: User = Depends(get_current_user)
 ) -> PurchasedMoviesResponse:
-
-    token_data = jwt_manager.decode_access_token(token)
-    user_id = token_data["user_id"]
-
-    user = await get_user_by_id(db, user_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User with the given ID was not found."
-        )
-
     purchased_movies = await get_purchased_movies_from_db(user, db)
     return PurchasedMoviesResponse(
         purchased_movies=[movie.name for movie in purchased_movies]
