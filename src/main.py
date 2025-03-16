@@ -31,24 +31,44 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(accounts.router, prefix="/users", tags=["Authentication"])
-app.include_router(profiles.router, prefix="/profiles", tags=["Profile"])
-app.include_router(movies.router, prefix="/movies", tags=["Movies"])
-app.include_router(genres.router, prefix="/genres", tags=["Genres"])
-app.include_router(stars.router, prefix="/stars", tags=["Stars"])
+app.include_router(
+    accounts.router,
+    prefix=f"{api_version_prefix}/users",
+    tags=["Authentication"]
+)
+app.include_router(
+    profiles.router,
+    prefix=f"{api_version_prefix}/profiles",
+    tags=["Profile"]
+)
+app.include_router(
+    movies.router,
+    prefix=f"{api_version_prefix}/movies",
+    tags=["Movies"]
+)
+app.include_router(
+    genres.router,
+    prefix=f"{api_version_prefix}/genres",
+    tags=["Genres"]
+)
+app.include_router(
+    stars.router,
+    prefix=f"{api_version_prefix}/stars",
+    tags=["Stars"]
+)
 app.include_router(
     shopping_cart.router,
-    prefix="/shopping-cart",
+    prefix=f"{api_version_prefix}/shopping-cart",
     tags=["Shopping Cart"]
 )
 app.include_router(
     orders.router,
-    prefix="/orders",
+    prefix=f"{api_version_prefix}/orders",
     tags=["Orders"]
 )
 app.include_router(
     payments.router,
-    prefix="/payments",
+    prefix=f"{api_version_prefix}/payments",
     tags=["Payments"]
 )
 
