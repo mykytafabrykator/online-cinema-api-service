@@ -55,6 +55,7 @@ docker-compose -f docker-compose-dev.yml up --build
 - Stripe API (Payment Processing)
 - MinIO (Object Storage for Media Files)
 - Mailhog (Email Testing Tool)
+- Poetry (Project dependencies)
 - Docker & Docker Compose (Containerization & Deployment)
 - JWT Authentication
 - CI Pipeline
